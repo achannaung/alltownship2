@@ -1,0 +1,6 @@
+{
+  "name": "Village Lookup Tool",
+  "description": "An interactive database search and filtering tool for Myanmar villages, featuring MIMU P-Code tracking, township lookup, and coordinates visualization for monitors.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

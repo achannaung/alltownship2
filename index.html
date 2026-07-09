@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <script>
+      // Redefine window.fetch, globalThis.fetch, and self.fetch to support writing/setting in sandboxed environments where fetch is a getter-only property on prototype
+      (function() {
+        try {
+          var originalFetch = window.fetch || globalThis.fetch || self.fetch;
+          if (originalFetch) {
+            var currentFetch = originalFetch;
+            var descriptor = {
+              get: function() { return currentFetch; },
+              set: function(val) { currentFetch = val; },
+              configurable: true,
+              enumerable: true
+            };
+            try {
+              Object.defineProperty(window, 'fetch', descriptor);
+            } catch (e) {
+              console.warn("Could not patch window.fetch setter:", e);
+            }
+            if (typeof globalThis !== 'undefined') {
+              try {
+                Object.defineProperty(globalThis, 'fetch', descriptor);
+              } catch (e) {
+                console.warn("Could not patch globalThis.fetch setter:", e);
+              }
+            }
+            if (typeof self !== 'undefined') {
+              try {
+                Object.defineProperty(self, 'fetch', descriptor);
+              } catch (e) {
+                console.warn("Could not patch self.fetch setter:", e);
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Error patching fetch setter:", e);
+        }
+      })();
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>All Township Lookup</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
