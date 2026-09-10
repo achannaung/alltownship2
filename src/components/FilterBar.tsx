@@ -9,6 +9,9 @@ interface FilterBarProps {
   setTownshipQuery: (q: string) => void;
   villageQuery: string;
   setVillageQuery: (q: string) => void;
+  villageEnQuery: string;
+  setVillageEnQuery: (q: string) => void;
+  townshipInputRef: React.RefObject<HTMLInputElement | null>;
   onSearch: () => void;
   onClear: () => void;
   totalCount: number;
@@ -23,6 +26,9 @@ export default function FilterBar({
   setTownshipQuery,
   villageQuery,
   setVillageQuery,
+  villageEnQuery,
+  setVillageEnQuery,
+  townshipInputRef,
   onSearch,
   onClear,
   totalCount,
@@ -46,11 +52,11 @@ export default function FilterBar({
         </div>
         <div>
           <h2 className="text-xl font-semibold tracking-tight text-white font-serif">Search & Filter</h2>
-          <p className="text-xs text-slate-400">Refine the database by state, township, or Burmese name</p>
+          <p className="text-xs text-slate-400">Refine the database by state, township, or village name</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* State/Region filter */}
         <div className="flex flex-col gap-2">
           <label htmlFor="state-select" className="text-sm font-medium text-slate-300 flex items-center justify-between">
@@ -81,12 +87,14 @@ export default function FilterBar({
 
         {/* Township filter */}
         <div className="flex flex-col gap-2">
-          <label htmlFor="township-input" className="text-sm font-medium text-slate-300">
-            Township Name (English):
+          <label htmlFor="township-input" className="text-sm font-medium text-slate-300 flex items-center justify-between">
+            <span>Township Name (English):</span>
+            <kbd className="text-[10px] font-mono bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-slate-400">/</kbd>
           </label>
           <div className="relative">
             <input
               id="township-input"
+              ref={townshipInputRef}
               type="text"
               value={townshipQuery}
               onChange={(e) => setTownshipQuery(e.target.value)}
@@ -98,6 +106,33 @@ export default function FilterBar({
               <button
                 type="button"
                 onClick={() => setTownshipQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* English village name filter */}
+        <div className="flex flex-col gap-2">
+          <label htmlFor="village-en-input" className="text-sm font-medium text-slate-300">
+            Village Name (ENG):
+          </label>
+          <div className="relative">
+            <input
+              id="village-en-input"
+              type="text"
+              value={villageEnQuery}
+              onChange={(e) => setVillageEnQuery(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="e.g. Ywa Ma, Kone Gyi"
+              className="w-full glass-input rounded-xl pl-4 pr-10 py-3 text-white placeholder-slate-500"
+            />
+            {villageEnQuery && (
+              <button
+                type="button"
+                onClick={() => setVillageEnQuery('')}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
               >
                 <X size={16} />
@@ -134,7 +169,13 @@ export default function FilterBar({
         </div>
       </div>
 
-      <div className="mt-6 pt-5 border-t border-slate-800/60 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="mt-6 pt-5 border-t border-slate-800/60 flex flex-col gap-4">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-500">
+          <span className="flex items-center gap-1.5"><kbd className="font-mono bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-slate-300">/</kbd> focus township</span>
+          <span className="flex items-center gap-1.5"><kbd className="font-mono bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-slate-300">Enter</kbd> search</span>
+          <span className="flex items-center gap-1.5"><kbd className="font-mono bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-slate-300">Esc</kbd> clear</span>
+        </div>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="text-sm text-slate-400 flex items-center gap-2">
           <Database size={16} className="text-indigo-400" />
           <span>
@@ -171,6 +212,7 @@ export default function FilterBar({
             <Search size={18} />
             <span>Search</span>
           </button>
+        </div>
         </div>
       </div>
     </div>

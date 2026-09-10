@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import { MOCK_VILLAGES } from './data/villages';
 import { Village, FlaggedVillage, MonitorNote } from './types';
 import FilterBar from './components/FilterBar';
@@ -39,10 +39,12 @@ export default function App() {
   const [selectedState, setSelectedState] = useState('');
   const [townshipQuery, setTownshipQuery] = useState('');
   const [villageQuery, setVillageQuery] = useState('');
+  const [villageEnQuery, setVillageEnQuery] = useState('');
 
-  const [appliedFilters, setAppliedFilters] = useState({ state: '', township: '', village: '' });
+  const [appliedFilters, setAppliedFilters] = useState({ state: '', township: '', village: '', villageEn: '' });
   const [hasSearched, setHasSearched] = useState(false);
   const [selectedVillage, setSelectedVillage] = useState<Village | null>(null);
+  const townshipInputRef = useRef<HTMLInputElement | null>(null);
 
   const [flaggedStates, setFlaggedStates] = useState<Record<string, FlaggedVillage>>(() => {
     try {
@@ -120,13 +122,13 @@ export default function App() {
         return Array.from(map.values());
       });
       setRegistryLoaded(true);
-      setAppliedFilters({ state: selectedState, township: townshipQuery, village: villageQuery });
+      setAppliedFilters({ state: selectedState, township: townshipQuery, village: villageQuery, villageEn: villageEnQuery });
       setHasSearched(true);
     } catch (err) {
       console.error(err);
       setDownloadError(err instanceof Error ? err.message : String(err));
       // Fallback: still filter whatever we have locally
-      setAppliedFilters({ state: selectedState, township: townshipQuery, village: villageQuery });
+      setAppliedFilters({ state: selectedState, township: townshipQuery, village: villageQuery, villageEn: villageEnQuery });
       setHasSearched(true);
     } finally {
       setIsLoading(false);
@@ -149,22 +151,47 @@ export default function App() {
     setSelectedState('');
     setTownshipQuery('');
     setVillageQuery('');
-    setAppliedFilters({ state: '', township: '', village: '' });
+    setVillageEnQuery('');
+    setAppliedFilters({ state: '', township: '', village: '', villageEn: '' });
     setHasSearched(false);
   };
+
+  // Global keyboard shortcuts: "/" focuses township, "Enter" searches, "Esc" clears/closes
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const tag = (target?.tagName || '').toLowerCase();
+      const typing = tag === 'input' || tag === 'textarea' || tag === 'select' || target?.isContentEditable;
+      if (e.key === '/' && !typing) {
+        e.preventDefault();
+        townshipInputRef.current?.focus();
+      } else if (e.key === 'Escape') {
+        if (selectedVillage) setSelectedVillage(null);
+        else handleClear();
+      } else if (e.key === 'Enter' && !typing) {
+        handleSearch();
+      }
+      // Note: Enter inside text inputs is already handled by FilterBar (no double-trigger:
+      // this global handler skips Enter while typing).
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  });
 
   // Memoized filtering with precomputed lowercase (fast even for 19k rows)
   const filteredVillages = useMemo(() => {
     const fState = appliedFilters.state;
     const fTs = appliedFilters.township.toLowerCase().trim();
     const fV = appliedFilters.village.toLowerCase().trim();
-    if (!fState && !fTs && !fV) return hasSearched ? allVillages.slice(0, 5000) : [];
+    const fVE = appliedFilters.villageEn.toLowerCase().trim();
+    if (!fState && !fTs && !fV && !fVE) return hasSearched ? allVillages.slice(0, 5000) : [];
     const out: Village[] = [];
     for (let i = 0; i < allVillages.length; i++) {
       const v = allVillages[i];
       if (fState && v.stateEn !== fState) continue;
       if (fTs && !(v.townshipEn.toLowerCase().includes(fTs) || v.townshipMm.toLowerCase().includes(fTs))) continue;
       if (fV && !(v.nameEn.toLowerCase().includes(fV) || v.nameMm.toLowerCase().includes(fV))) continue;
+      if (fVE && !v.nameEn.toLowerCase().includes(fVE)) continue;
       out.push(v);
       if (out.length >= 20000) break; // safety cap for UI responsiveness
     }
@@ -277,6 +304,9 @@ export default function App() {
           setTownshipQuery={setTownshipQuery}
           villageQuery={villageQuery}
           setVillageQuery={setVillageQuery}
+          villageEnQuery={villageEnQuery}
+          setVillageEnQuery={setVillageEnQuery}
+          townshipInputRef={townshipInputRef}
           onSearch={handleSearch}
           onClear={handleClear}
           totalCount={totalRecords}
@@ -306,10 +336,10 @@ export default function App() {
               <span className="text-xs text-slate-500 font-medium select-none">Or click a shortcut:</span>
               <div className="flex flex-wrap justify-center gap-2">
                 {['Yangon Region', 'Mandalay Region'].map((s) => (
-                  <button key={s} onClick={() => { setSelectedState(s); setAppliedFilters({ state: s, township: '', village: '' }); loadState(s).then((v) => { mergeIntoPool(v); setRegistryLoaded(true); setHasSearched(true); }); }}
+                  <button key={s} onClick={() => { setSelectedState(s); setAppliedFilters({ state: s, township: '', village: '', villageEn: '' }); loadState(s).then((v) => { mergeIntoPool(v); setRegistryLoaded(true); setHasSearched(true); }); }}
                     className="px-3.5 py-2 rounded-xl bg-slate-900/60 hover:bg-slate-800 text-xs text-slate-300 border border-slate-800 hover:border-indigo-500/40 hover:text-indigo-300 transition cursor-pointer">{s}</button>
                 ))}
-                <button onClick={() => { setTownshipQuery('Bogale'); setSelectedState('Ayeyarwady Region'); loadState('Ayeyarwady Region').then((v) => { mergeIntoPool(v); setAppliedFilters({ state: 'Ayeyarwady Region', township: 'Bogale', village: '' }); setRegistryLoaded(true); setHasSearched(true); }); }}
+                <button onClick={() => { setTownshipQuery('Bogale'); setSelectedState('Ayeyarwady Region'); loadState('Ayeyarwady Region').then((v) => { mergeIntoPool(v); setAppliedFilters({ state: 'Ayeyarwady Region', township: 'Bogale', village: '', villageEn: '' }); setRegistryLoaded(true); setHasSearched(true); }); }}
                   className="px-3.5 py-2 rounded-xl bg-slate-900/60 hover:bg-slate-800 text-xs text-slate-300 border border-slate-800 hover:border-indigo-500/40 hover:text-indigo-300 transition cursor-pointer">Bogale Township</button>
               </div>
             </div>
