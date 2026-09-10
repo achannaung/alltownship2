@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { 
   Compass, 
   MapPin, 
@@ -42,6 +43,8 @@ export default function LocationMap({
   const [copied, setCopied] = useState(false);
   const [isDarkMap, setIsDarkMap] = useState(true);
   const [mapZoom, setMapZoom] = useState(12);
+  const [tilesFailed, setTilesFailed] = useState(false);
+  const tileErrorCount = useRef(0);
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -58,19 +61,12 @@ export default function LocationMap({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // 1. Programmatically inject Leaflet CSS stylesheet if not already present
-  useEffect(() => {
-    const cssId = 'leaflet-css';
-    if (!document.getElementById(cssId)) {
-      const link = document.createElement('link');
-      link.id = cssId;
-      link.rel = 'stylesheet';
-      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-      document.head.appendChild(link);
-    }
-  }, []);
+  // Key-free tile providers (no API key needed, reliable worldwide):
+  // dark  = Esri World Dark Gray Canvas, light = OpenStreetMap Standard
+  const DARK_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}';
+  const LIGHT_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
-  // 2. Initialize Leaflet Map once on mount
+  // 1. Initialize Leaflet Map once on mount
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
@@ -82,10 +78,21 @@ export default function LocationMap({
       attributionControl: false,
     });
 
-    // Dark Matter layer default
-    const tiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    // Dark Esri layer default (no API key required)
+    const tiles = L.tileLayer(DARK_URL, {
       maxZoom: 19,
     }).addTo(map);
+
+    // If the network blocks tiles, show a fallback notice instead of a broken map
+    tileErrorCount.current = 0;
+    tiles.on('tileerror', () => {
+      tileErrorCount.current += 1;
+      if (tileErrorCount.current >= 8) setTilesFailed(true);
+    });
+    tiles.on('tileload', () => {
+      tileErrorCount.current = 0;
+      setTilesFailed(false);
+    });
 
     mapRef.current = map;
     tileLayerRef.current = tiles;
@@ -118,9 +125,9 @@ export default function LocationMap({
 
     // Update tile layer url based on mode
     if (tileLayerRef.current) {
-      const tileUrl = isDarkMap
-        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-        : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+      const tileUrl = isDarkMap ? DARK_URL : LIGHT_URL;
+      tileErrorCount.current = 0;
+      setTilesFailed(false);
       tileLayerRef.current.setUrl(tileUrl);
     }
 
@@ -277,6 +284,15 @@ export default function LocationMap({
           <span className="font-semibold text-slate-200">{villageName}</span>
           <span className="text-slate-500 font-mono">Zoom: {mapZoom}</span>
         </div>
+
+        {/* Tile-blocked fallback notice (no API key needed by these providers,
+            but some networks block map servers — coordinates stay usable) */}
+        {tilesFailed && (
+          <div className="absolute inset-x-3 top-3 z-10 bg-amber-500/90 text-slate-950 text-[11px] font-semibold px-3 py-2 rounded-lg shadow-xl flex items-center justify-between gap-2" style={{ zIndex: 1000 }}>
+            <span>Map tiles blocked on your network. Use “Open Maps” above for location.</span>
+            <button onClick={() => setTilesFailed(false)} className="underline shrink-0" title="Dismiss">Hide</button>
+          </div>
+        )}
       </div>
 
       {/* Metadata Footer bar */}
@@ -285,7 +301,7 @@ export default function LocationMap({
           <Globe size={11} className="text-slate-600" />
           <span>Regional Context: {townshipEn} • {stateEn}</span>
         </span>
-        <span className="font-mono text-indigo-400/80">OpenStreetMap &copy; CARTO</span>
+        <span className="font-mono text-indigo-400/80">{isDarkMap ? 'Esri • OpenStreetMap contributors' : '© OpenStreetMap contributors'}</span>
       </div>
     </div>
   );
