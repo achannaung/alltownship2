@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Village, FlaggedVillage } from '../types';
 import { 
   ArrowUpDown, 
@@ -44,6 +44,14 @@ export default function VillageTable({
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
+  // Reset page when dataset changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [villages]);
+
+  // Cached collator: creating Intl.Collator per comparison was a major slowdown for 19k rows
+  const collator = useMemo(() => new Intl.Collator('my', { sensitivity: 'base', numeric: true }), []);
+
   // Sorting Logic
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -64,19 +72,21 @@ export default function VillageTable({
       : <ArrowDown size={14} className="sort-indicator text-indigo-400" />;
   };
 
-  const sortedVillages = [...villages].sort((a, b) => {
-    let valA = a[sortField];
-    let valB = b[sortField];
-
-    if (typeof valA === 'string' && typeof valB === 'string') {
-      return sortDirection === 'asc' 
-        ? valA.localeCompare(valB, 'my') 
-        : valB.localeCompare(valA, 'my');
-    } else if (typeof valA === 'number' && typeof valB === 'number') {
-      return sortDirection === 'asc' ? valA - valB : valB - valA;
-    }
-    return 0;
-  });
+  const sortedVillages = useMemo(() => {
+    const arr = [...villages];
+    arr.sort((a, b) => {
+      const valA = a[sortField];
+      const valB = b[sortField];
+      if (typeof valA === 'string' && typeof valB === 'string') {
+        const c = collator.compare(valA, valB);
+        return sortDirection === 'asc' ? c : -c;
+      } else if (typeof valA === 'number' && typeof valB === 'number') {
+        return sortDirection === 'asc' ? valA - valB : valB - valA;
+      }
+      return 0;
+    });
+    return arr;
+  }, [villages, sortField, sortDirection, collator]);
 
   // Pagination calculations
   const totalItems = sortedVillages.length;

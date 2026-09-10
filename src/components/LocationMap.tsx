@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { motion } from 'motion/react';
 import L from 'leaflet';
 import { 
   Compass, 

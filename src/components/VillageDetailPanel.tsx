@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { Village, FlaggedVillage, MonitorNote } from '../types';
-import LocationMap from './LocationMap';
+const LocationMap = React.lazy(() => import('./LocationMap'));
 import { 
   X, 
   MapPin, 
@@ -134,14 +134,16 @@ export default function VillageDetailPanel({
             </div>
           </div>
 
-          {/* Geographic Metadata & Location Map Component */}
-          <LocationMap
+          {/* Geographic Metadata & Location Map Component (lazy: Leaflet loads only on open) */}
+          <Suspense fallback={<div className="bg-slate-900/40 border border-slate-800 rounded-xl p-6 text-center text-xs text-slate-500">Loading map…</div>}>
+            <LocationMap
             latitude={village.latitude}
             longitude={village.longitude}
             villageName={village.nameEn}
             townshipEn={village.townshipEn}
             stateEn={village.stateEn}
           />
+          </Suspense>
 
           {/* Demographics & Stats */}
           <div className="bg-slate-900/20 border border-slate-800 rounded-xl p-4 space-y-4">

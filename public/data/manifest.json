@@ -1,0 +1,95 @@
+{
+ "total": 72569,
+ "states": [
+  {
+   "stateEn": "Ayeyarwady Region",
+   "file": "data/ayeyarwady-region.json",
+   "count": 12698,
+   "bytes": 1471940
+  },
+  {
+   "stateEn": "Bago Region",
+   "file": "data/bago-region.json",
+   "count": 6719,
+   "bytes": 766807
+  },
+  {
+   "stateEn": "Chin State",
+   "file": "data/chin-state.json",
+   "count": 1518,
+   "bytes": 144834
+  },
+  {
+   "stateEn": "Kachin State",
+   "file": "data/kachin-state.json",
+   "count": 3164,
+   "bytes": 319222
+  },
+  {
+   "stateEn": "Kayah State",
+   "file": "data/kayah-state.json",
+   "count": 716,
+   "bytes": 73162
+  },
+  {
+   "stateEn": "Kayin State",
+   "file": "data/kayin-state.json",
+   "count": 2163,
+   "bytes": 233008
+  },
+  {
+   "stateEn": "Magway Region",
+   "file": "data/magway-region.json",
+   "count": 4906,
+   "bytes": 514792
+  },
+  {
+   "stateEn": "Mandalay Region",
+   "file": "data/mandalay-region.json",
+   "count": 4975,
+   "bytes": 549658
+  },
+  {
+   "stateEn": "Mon State",
+   "file": "data/mon-state.json",
+   "count": 1317,
+   "bytes": 135776
+  },
+  {
+   "stateEn": "Naypyidaw Union Territory",
+   "file": "data/naypyidaw-union-territory.json",
+   "count": 916,
+   "bytes": 106777
+  },
+  {
+   "stateEn": "Rakhine State",
+   "file": "data/rakhine-state.json",
+   "count": 4203,
+   "bytes": 474099
+  },
+  {
+   "stateEn": "Sagaing Region",
+   "file": "data/sagaing-region.json",
+   "count": 6563,
+   "bytes": 687534
+  },
+  {
+   "stateEn": "Shan State",
+   "file": "data/shan-state.json",
+   "count": 18953,
+   "bytes": 2086256
+  },
+  {
+   "stateEn": "Tanintharyi Region",
+   "file": "data/tanintharyi-region.json",
+   "count": 1483,
+   "bytes": 164100
+  },
+  {
+   "stateEn": "Yangon Region",
+   "file": "data/yangon-region.json",
+   "count": 2275,
+   "bytes": 266700
+  }
+ ]
+}
