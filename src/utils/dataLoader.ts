@@ -58,6 +58,16 @@ let townshipCache: TownshipEntry[] | null = null;
 const stateCache = new Map<string, Village[]>();
 const inflight = new Map<string, Promise<Village[]>>();
 
+// Absolute base so fetch works from any route (Vite base, default '/')
+function absBase(base: string): string {
+  if (base) return base.endsWith('/') ? base : base + '/';
+  try {
+    const b = (import.meta as unknown as { env: { BASE_URL: string } }).env.BASE_URL;
+    if (b) return b.endsWith('/') ? b : b + '/';
+  } catch {}
+  return '/';
+}
+
 async function fetchJSON<T>(url: string): Promise<T> {
   const res = await fetch(url, { headers: { Accept: 'application/json' } });
   if (!res.ok) throw new Error(`Fetch failed ${res.status} for ${url}`);
@@ -66,13 +76,13 @@ async function fetchJSON<T>(url: string): Promise<T> {
 
 export async function getManifest(base = ''): Promise<Manifest> {
   if (manifestCache) return manifestCache;
-  manifestCache = await fetchJSON<Manifest>(`${base}data/manifest.json`);
+  manifestCache = await fetchJSON<Manifest>(`${absBase(base)}data/manifest.json`);
   return manifestCache;
 }
 
 export async function getTownshipIndex(base = ''): Promise<TownshipEntry[]> {
   if (townshipCache) return townshipCache;
-  townshipCache = await fetchJSON<TownshipEntry[]>(`${base}data/townships.json`);
+  townshipCache = await fetchJSON<TownshipEntry[]>(`${absBase(base)}data/townships.json`);
   return townshipCache;
 }
 
@@ -126,7 +136,7 @@ export async function loadState(stateEn: string, base = ''): Promise<Village[]> 
   const p = inflight.get(stateEn);
   if (p) return p;
   const task = (async () => {
-    const file = await fetchJSON<CompactFile>(`${base}data/${stateSlug(stateEn)}.json`);
+    const file = await fetchJSON<CompactFile>(`${absBase(base)}data/${stateSlug(stateEn)}.json`);
     const villages = file.rows.map((r, i) => toVillage(file.state || stateEn, i, r));
     stateCache.set(stateEn, villages);
     inflight.delete(stateEn);
