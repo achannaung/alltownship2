@@ -99,29 +99,26 @@ export default function App() {
     } catch {}
   };
 
-  // Instant search: load only relevant state file(s), no artificial delay
+  // Instant search: always load the state file(s) relevant to the CURRENT
+  // filters (loader caches them, so repeats are instant), then merge into
+  // the pool. Never reuse a stale pool — that forced a page refresh.
   const handleSearch = async () => {
     setIsLoading(true);
     setDownloadError(null);
     try {
       const filters = { state: selectedState, township: townshipQuery };
       setLoadProgress(filters.state ? `Loading ${filters.state}…` : 'Finding matching townships…');
-      const villages =
-        allVillages.length > MOCK_VILLAGES.length &&
-        (filters.state === appliedFilters.state || !filters.state)
-          ? allVillages
-          : await loadRelevantStates(filters, '', (done, total) => {
-              setLoadProgress(`Loading datasets ${done}/${total}…`);
-            });
-      // If a specific state was requested, replace; otherwise merge newly loaded
-      if (filters.state) {
-        const fresh = await loadState(filters.state);
-        setAllVillages(fresh);
-      } else if (villages.length > allVillages.length) {
-        setAllVillages(villages);
-      } else if (!registryLoaded) {
-        setAllVillages(villages);
-      }
+      const villages = await loadRelevantStates(filters, '', (done, total) => {
+        if (total > 1) setLoadProgress(`Loading datasets ${done}/${total}…`);
+      });
+      setAllVillages((prev) => {
+        const base = prev.length > MOCK_VILLAGES.length ? prev : [];
+        if (base.length === 0) return villages;
+        const map = new Map<string, Village>();
+        for (const v of base) map.set(v.id, v);
+        for (const v of villages) map.set(v.id, v);
+        return Array.from(map.values());
+      });
       setRegistryLoaded(true);
       setAppliedFilters({ state: selectedState, township: townshipQuery, village: villageQuery });
       setHasSearched(true);
@@ -137,6 +134,17 @@ export default function App() {
     }
   };
 
+  // Merge helper for shortcut buttons (same dedupe logic as handleSearch)
+  const mergeIntoPool = (incoming: Village[]) => {
+    setAllVillages((prev) => {
+      const base = prev.length > MOCK_VILLAGES.length ? prev : [];
+      if (base.length === 0) return incoming;
+      const map = new Map<string, Village>();
+      for (const v of base) map.set(v.id, v);
+      for (const v of incoming) map.set(v.id, v);
+      return Array.from(map.values());
+    });
+  };
   const handleClear = () => {
     setSelectedState('');
     setTownshipQuery('');
@@ -298,10 +306,10 @@ export default function App() {
               <span className="text-xs text-slate-500 font-medium select-none">Or click a shortcut:</span>
               <div className="flex flex-wrap justify-center gap-2">
                 {['Yangon Region', 'Mandalay Region'].map((s) => (
-                  <button key={s} onClick={() => { setSelectedState(s); setAppliedFilters({ state: s, township: '', village: '' }); loadState(s).then((v) => { setAllVillages(v); setRegistryLoaded(true); setHasSearched(true); }); }}
+                  <button key={s} onClick={() => { setSelectedState(s); setAppliedFilters({ state: s, township: '', village: '' }); loadState(s).then((v) => { mergeIntoPool(v); setRegistryLoaded(true); setHasSearched(true); }); }}
                     className="px-3.5 py-2 rounded-xl bg-slate-900/60 hover:bg-slate-800 text-xs text-slate-300 border border-slate-800 hover:border-indigo-500/40 hover:text-indigo-300 transition cursor-pointer">{s}</button>
                 ))}
-                <button onClick={() => { setTownshipQuery('Bogale'); setSelectedState('Ayeyarwady Region'); loadState('Ayeyarwady Region').then((v) => { setAllVillages(v); setAppliedFilters({ state: 'Ayeyarwady Region', township: 'Bogale', village: '' }); setRegistryLoaded(true); setHasSearched(true); }); }}
+                <button onClick={() => { setTownshipQuery('Bogale'); setSelectedState('Ayeyarwady Region'); loadState('Ayeyarwady Region').then((v) => { mergeIntoPool(v); setAppliedFilters({ state: 'Ayeyarwady Region', township: 'Bogale', village: '' }); setRegistryLoaded(true); setHasSearched(true); }); }}
                   className="px-3.5 py-2 rounded-xl bg-slate-900/60 hover:bg-slate-800 text-xs text-slate-300 border border-slate-800 hover:border-indigo-500/40 hover:text-indigo-300 transition cursor-pointer">Bogale Township</button>
               </div>
             </div>
