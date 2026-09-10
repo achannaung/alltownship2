@@ -4,7 +4,8 @@ import { Village, FlaggedVillage, MonitorNote } from './types';
 import FilterBar from './components/FilterBar';
 import VillageTable from './components/VillageTable';
 import { Database, Search, CheckCircle2, SlidersHorizontal, Loader2, Wifi, AlertTriangle, Moon, Sun } from 'lucide-react';
-import { getManifest, getTownshipIndex, loadRelevantStates, loadState } from './utils/dataLoader';
+import { getManifest, getTownshipIndex, loadRelevantStates } from './utils/dataLoader';
+import type { TownshipEntry } from './utils/dataLoader';
 
 const VillageDetailPanel = React.lazy(() => import('./components/VillageDetailPanel'));
 
@@ -34,7 +35,7 @@ export default function App() {
   const [registryLoaded, setRegistryLoaded] = useState(false);
   const [totalRecords, setTotalRecords] = useState<number>(MOCK_VILLAGES.length);
   const [loadProgress, setLoadProgress] = useState<string>('');
-  const [townshipSuggestions, setTownshipSuggestions] = useState<string[]>([]);
+  const [townshipOptions, setTownshipOptions] = useState<TownshipEntry[]>([]);
 
   const [selectedState, setSelectedState] = useState('');
   const [townshipQuery, setTownshipQuery] = useState('');
@@ -75,7 +76,7 @@ export default function App() {
         const [manifest, towns] = await Promise.all([getManifest(), getTownshipIndex()]);
         if (cancelled) return;
         setTotalRecords(manifest.total);
-        setTownshipSuggestions([...new Set(towns.map((t) => t.township))].sort().slice(0, 400));
+        setTownshipOptions(towns);
       } catch (e) {
         if (!cancelled) setDownloadError(e instanceof Error ? e.message : String(e));
       }
@@ -101,42 +102,7 @@ export default function App() {
     } catch {}
   };
 
-  // Instant search: always load the state file(s) relevant to the CURRENT
-  // filters (loader caches them, so repeats are instant), then merge into
-  // the pool. Never reuse a stale pool — that forced a page refresh.
-  const handleSearch = async () => {
-    setIsLoading(true);
-    setDownloadError(null);
-    try {
-      const filters = { state: selectedState, township: townshipQuery };
-      setLoadProgress(filters.state ? `Loading ${filters.state}…` : 'Finding matching townships…');
-      const villages = await loadRelevantStates(filters, '', (done, total) => {
-        if (total > 1) setLoadProgress(`Loading datasets ${done}/${total}…`);
-      });
-      setAllVillages((prev) => {
-        const base = prev.length > MOCK_VILLAGES.length ? prev : [];
-        if (base.length === 0) return villages;
-        const map = new Map<string, Village>();
-        for (const v of base) map.set(v.id, v);
-        for (const v of villages) map.set(v.id, v);
-        return Array.from(map.values());
-      });
-      setRegistryLoaded(true);
-      setAppliedFilters({ state: selectedState, township: townshipQuery, village: villageQuery, villageEn: villageEnQuery });
-      setHasSearched(true);
-    } catch (err) {
-      console.error(err);
-      setDownloadError(err instanceof Error ? err.message : String(err));
-      // Fallback: still filter whatever we have locally
-      setAppliedFilters({ state: selectedState, township: townshipQuery, village: villageQuery, villageEn: villageEnQuery });
-      setHasSearched(true);
-    } finally {
-      setIsLoading(false);
-      setLoadProgress('');
-    }
-  };
-
-  // Merge helper for shortcut buttons (same dedupe logic as handleSearch)
+  // Merge helper (dedupe by id) — keeps previously loaded states in the pool
   const mergeIntoPool = (incoming: Village[]) => {
     setAllVillages((prev) => {
       const base = prev.length > MOCK_VILLAGES.length ? prev : [];
@@ -146,6 +112,80 @@ export default function App() {
       for (const v of incoming) map.set(v.id, v);
       return Array.from(map.values());
     });
+  };
+
+  // Recent searches (persisted, max 6)
+  interface RecentSearch {
+    state: string;
+    township: string;
+    village: string;
+    villageEn: string;
+  }
+  const [recentSearches, setRecentSearches] = useState<RecentSearch[]>(() => {
+    try {
+      const saved = localStorage.getItem('mimu_recent_searches');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const saveRecent = (r: RecentSearch) => {
+    if (!r.state && !r.township && !r.village && !r.villageEn) return;
+    setRecentSearches((prev) => {
+      const next = [
+        r,
+        ...prev.filter(
+          (p) =>
+            !(p.state === r.state && p.township === r.township && p.village === r.village && p.villageEn === r.villageEn)
+        ),
+      ].slice(0, 6);
+      try {
+        localStorage.setItem('mimu_recent_searches', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+  const formatRecent = (r: RecentSearch) =>
+    [r.state, r.township, r.villageEn || r.village].filter(Boolean).join(' • ') || 'All records';
+
+  // Core search with explicit params (loader caches files, repeats are instant).
+  // Always loads the file(s) relevant to CURRENT filters, then merges —
+  // never reuses a stale pool (that used to force a page refresh).
+  const runSearch = async (s: string, ts: string, v: string, ve: string) => {
+    setIsLoading(true);
+    setDownloadError(null);
+    try {
+      const filters = { state: s, township: ts };
+      setLoadProgress(s ? `Loading ${s}…` : 'Finding matching townships…');
+      const villages = await loadRelevantStates(filters, '', (done, total) => {
+        if (total > 1) setLoadProgress(`Loading datasets ${done}/${total}…`);
+      });
+      mergeIntoPool(villages);
+      setRegistryLoaded(true);
+      const applied = { state: s, township: ts, village: v, villageEn: ve };
+      setAppliedFilters(applied);
+      setHasSearched(true);
+      saveRecent(applied);
+    } catch (err) {
+      console.error(err);
+      setDownloadError(err instanceof Error ? err.message : String(err));
+      // Fallback: still filter whatever we have locally
+      setAppliedFilters({ state: s, township: ts, village: v, villageEn: ve });
+      setHasSearched(true);
+    } finally {
+      setIsLoading(false);
+      setLoadProgress('');
+    }
+  };
+
+  const handleSearch = () => runSearch(selectedState, townshipQuery, villageQuery, villageEnQuery);
+
+  const applyRecent = (r: RecentSearch) => {
+    setSelectedState(r.state);
+    setTownshipQuery(r.township);
+    setVillageQuery(r.village);
+    setVillageEnQuery(r.villageEn);
+    runSearch(r.state, r.township, r.village, r.villageEn);
   };
   const handleClear = () => {
     setSelectedState('');
@@ -177,6 +217,24 @@ export default function App() {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   });
+
+  // Unique village names from the loaded pool → autocomplete suggestions
+  const villageEnOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const v of allVillages) {
+      if (v.nameEn) set.add(v.nameEn);
+      if (set.size >= 3000) break;
+    }
+    return [...set].sort();
+  }, [allVillages]);
+  const villageMmOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const v of allVillages) {
+      if (v.nameMm) set.add(v.nameMm);
+      if (set.size >= 3000) break;
+    }
+    return [...set].sort();
+  }, [allVillages]);
 
   // Memoized filtering with precomputed lowercase (fast even for 19k rows)
   const filteredVillages = useMemo(() => {
@@ -265,7 +323,7 @@ export default function App() {
                 <div className="p-2 bg-emerald-500/20 rounded-lg text-emerald-400"><Wifi size={18} /></div>
                 <div>
                   <div className="text-sm font-semibold">Fast Registry Active — {allVillages.length.toLocaleString()} villages loaded</div>
-                  <div className="text-xs text-emerald-300/70 mt-0.5">Total available {totalRecords.toLocaleString()} across 15 states. Township index: {townshipSuggestions.length} names.</div>
+                  <div className="text-xs text-emerald-300/70 mt-0.5">Total available {totalRecords.toLocaleString()} across 15 states. Township index: {townshipOptions.length} names.</div>
                 </div>
               </div>
               <div className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">{allVillages.length.toLocaleString()} in memory</div>
@@ -307,6 +365,9 @@ export default function App() {
           villageEnQuery={villageEnQuery}
           setVillageEnQuery={setVillageEnQuery}
           townshipInputRef={townshipInputRef}
+          townshipOptions={townshipOptions}
+          villageEnOptions={villageEnOptions}
+          villageMmOptions={villageMmOptions}
           onSearch={handleSearch}
           onClear={handleClear}
           totalCount={totalRecords}
@@ -336,13 +397,26 @@ export default function App() {
               <span className="text-xs text-slate-500 font-medium select-none">Or click a shortcut:</span>
               <div className="flex flex-wrap justify-center gap-2">
                 {['Yangon Region', 'Mandalay Region'].map((s) => (
-                  <button key={s} onClick={() => { setSelectedState(s); setAppliedFilters({ state: s, township: '', village: '', villageEn: '' }); loadState(s).then((v) => { mergeIntoPool(v); setRegistryLoaded(true); setHasSearched(true); }); }}
+                  <button key={s} onClick={() => { setSelectedState(s); setTownshipQuery(''); setVillageQuery(''); setVillageEnQuery(''); runSearch(s, '', '', ''); }}
                     className="px-3.5 py-2 rounded-xl bg-slate-900/60 hover:bg-slate-800 text-xs text-slate-300 border border-slate-800 hover:border-indigo-500/40 hover:text-indigo-300 transition cursor-pointer">{s}</button>
                 ))}
-                <button onClick={() => { setTownshipQuery('Bogale'); setSelectedState('Ayeyarwady Region'); loadState('Ayeyarwady Region').then((v) => { mergeIntoPool(v); setAppliedFilters({ state: 'Ayeyarwady Region', township: 'Bogale', village: '', villageEn: '' }); setRegistryLoaded(true); setHasSearched(true); }); }}
+                <button onClick={() => { setTownshipQuery('Bogale'); setSelectedState('Ayeyarwady Region'); setVillageQuery(''); setVillageEnQuery(''); runSearch('Ayeyarwady Region', 'Bogale', '', ''); }}
                   className="px-3.5 py-2 rounded-xl bg-slate-900/60 hover:bg-slate-800 text-xs text-slate-300 border border-slate-800 hover:border-indigo-500/40 hover:text-indigo-300 transition cursor-pointer">Bogale Township</button>
               </div>
             </div>
+            {recentSearches.length > 0 && (
+              <div className="flex flex-col items-center gap-3 max-w-lg">
+                <span className="text-xs text-slate-500 font-medium select-none">Recent searches:</span>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {recentSearches.map((r, i) => (
+                    <button key={i} onClick={() => applyRecent(r)} title="Repeat this search"
+                      className="max-w-[220px] truncate px-3.5 py-2 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-xs text-indigo-300 border border-indigo-500/20 hover:border-indigo-500/40 transition cursor-pointer">
+                      {formatRecent(r)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <VillageTable villages={filteredVillages} flaggedStates={flaggedStates} onSelectVillage={setSelectedVillage} onCopyAllPCodes={handleCopyAllPCodes} pcodeCopied={pcodeCopied} onExportCSV={handleExportCSV} />

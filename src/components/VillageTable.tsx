@@ -232,11 +232,11 @@ export default function VillageTable({
             </p>
           </div>
         ) : (
-          <table className="w-full text-left border-collapse table-auto">
+          <table className="w-full text-left border-collapse table-auto min-w-[720px]">
             <thead>
               <tr className="bg-slate-950/80 border-b border-slate-800 text-slate-300 text-xs font-semibold uppercase tracking-wider">
                 <th 
-                  className="px-6 py-4 font-sans cursor-pointer hover:bg-slate-900/60 transition"
+                  className="px-3 py-3 sm:px-6 sm:py-4 font-sans cursor-pointer hover:bg-slate-900/60 transition"
                   onClick={() => handleSort('stateEn')}
                 >
                   <div className="flex items-center">
@@ -245,7 +245,7 @@ export default function VillageTable({
                   </div>
                 </th>
                 <th 
-                  className="px-6 py-4 font-sans cursor-pointer hover:bg-slate-900/60 transition"
+                  className="px-3 py-3 sm:px-6 sm:py-4 font-sans cursor-pointer hover:bg-slate-900/60 transition"
                   onClick={() => handleSort('townshipEn')}
                 >
                   <div className="flex items-center">
@@ -254,7 +254,7 @@ export default function VillageTable({
                   </div>
                 </th>
                 <th 
-                  className="px-6 py-4 font-sans cursor-pointer hover:bg-slate-900/60 transition"
+                  className="px-3 py-3 sm:px-6 sm:py-4 font-sans cursor-pointer hover:bg-slate-900/60 transition"
                   onClick={() => handleSort('nameEn')}
                 >
                   <div className="flex items-center">
@@ -263,7 +263,7 @@ export default function VillageTable({
                   </div>
                 </th>
                 <th 
-                  className="px-6 py-4 font-sans cursor-pointer hover:bg-slate-900/60 transition"
+                  className="px-3 py-3 sm:px-6 sm:py-4 font-sans cursor-pointer hover:bg-slate-900/60 transition"
                   onClick={() => handleSort('nameMm')}
                 >
                   <div className="flex items-center">
@@ -271,7 +271,7 @@ export default function VillageTable({
                     {getSortIndicator('nameMm')}
                   </div>
                 </th>
-                <th className="px-6 py-4 font-sans text-center w-[100px]">Action</th>
+                <th                   className="px-3 py-3 sm:px-6 sm:py-4 font-sans text-center w-[80px] sm:w-[100px]">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/50">
@@ -282,19 +282,19 @@ export default function VillageTable({
                   className="glass-table-row hover:bg-slate-800/30 cursor-pointer transition text-sm group"
                 >
                   {/* State / Region */}
-                  <td className="px-6 py-3.5 text-slate-300 font-sans">
+                  <td className="px-3 py-3 sm:px-6 sm:py-3.5 text-slate-300 font-sans text-xs sm:text-sm">
                     {village.stateEn}
                   </td>
 
                   {/* Township */}
-                  <td className="px-6 py-3.5 text-slate-300 font-sans">
+                  <td className="px-3 py-3 sm:px-6 sm:py-3.5 text-slate-300 font-sans text-xs sm:text-sm">
                     <span className="font-medium">{village.townshipEn}</span>
                     <span className="text-slate-500 text-xs block mt-0.5">{village.townshipMm}</span>
                   </td>
 
                   {/* English Name */}
                   <td 
-                    className="px-6 py-3.5 text-slate-200 font-sans cursor-pointer group/copy"
+                    className="px-3 py-3 sm:px-6 sm:py-3.5 text-slate-200 font-sans text-xs sm:text-sm cursor-pointer group/copy"
                     onClick={(e) => handleCopyName(e, village.id, village.nameEn)}
                     title="Click to copy English name"
                   >
@@ -311,12 +311,12 @@ export default function VillageTable({
                   </td>
 
                   {/* Burmese Name */}
-                  <td className="px-6 py-3.5 font-sans font-medium text-white text-base">
+                  <td className="px-3 py-3 sm:px-6 sm:py-3.5 font-sans font-medium text-white text-sm sm:text-base">
                     {village.nameMm}
                   </td>
 
                   {/* Action */}
-                  <td className="px-6 py-3.5 text-center">
+                  <td className="px-3 py-3 sm:px-6 sm:py-3.5 text-center">
                     <button
                       type="button"
                       onClick={(e) => {

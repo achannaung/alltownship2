@@ -1,6 +1,8 @@
 import React from 'react';
 import { Search, X, SlidersHorizontal, Database } from 'lucide-react';
 import { MYANMAR_STATES_REGIONS } from '../data/villages';
+import type { TownshipEntry } from '../utils/dataLoader';
+import AutocompleteInput from './AutocompleteInput';
 
 interface FilterBarProps {
   selectedState: string;
@@ -12,6 +14,9 @@ interface FilterBarProps {
   villageEnQuery: string;
   setVillageEnQuery: (q: string) => void;
   townshipInputRef: React.RefObject<HTMLInputElement | null>;
+  townshipOptions: TownshipEntry[];
+  villageEnOptions: string[];
+  villageMmOptions: string[];
   onSearch: () => void;
   onClear: () => void;
   totalCount: number;
@@ -29,6 +34,9 @@ export default function FilterBar({
   villageEnQuery,
   setVillageEnQuery,
   townshipInputRef,
+  townshipOptions,
+  villageEnOptions,
+  villageMmOptions,
   onSearch,
   onClear,
   totalCount,
@@ -91,27 +99,18 @@ export default function FilterBar({
             <span>Township Name (English):</span>
             <kbd className="text-[10px] font-mono bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-slate-400">/</kbd>
           </label>
-          <div className="relative">
-            <input
-              id="township-input"
-              ref={townshipInputRef}
-              type="text"
-              value={townshipQuery}
-              onChange={(e) => setTownshipQuery(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="e.g. Taikkyi, Kalaw"
-              className="w-full glass-input rounded-xl pl-4 pr-10 py-3 text-white placeholder-slate-500"
-            />
-            {townshipQuery && (
-              <button
-                type="button"
-                onClick={() => setTownshipQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
-              >
-                <X size={16} />
-              </button>
-            )}
-          </div>
+          <AutocompleteInput
+            id="township-input"
+            inputRef={townshipInputRef}
+            value={townshipQuery}
+            onChange={setTownshipQuery}
+            onKeyDown={handleKeyDown}
+            placeholder="e.g. Taikkyi, Kalaw"
+            items={townshipOptions.map((t) => ({
+              value: t.township,
+              hint: `${t.stateEn} • ${t.count.toLocaleString()}`,
+            }))}
+          />
         </div>
 
         {/* English village name filter */}
@@ -119,26 +118,14 @@ export default function FilterBar({
           <label htmlFor="village-en-input" className="text-sm font-medium text-slate-300">
             Village Name (ENG):
           </label>
-          <div className="relative">
-            <input
-              id="village-en-input"
-              type="text"
-              value={villageEnQuery}
-              onChange={(e) => setVillageEnQuery(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="e.g. Ywa Ma, Kone Gyi"
-              className="w-full glass-input rounded-xl pl-4 pr-10 py-3 text-white placeholder-slate-500"
-            />
-            {villageEnQuery && (
-              <button
-                type="button"
-                onClick={() => setVillageEnQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
-              >
-                <X size={16} />
-              </button>
-            )}
-          </div>
+          <AutocompleteInput
+            id="village-en-input"
+            value={villageEnQuery}
+            onChange={setVillageEnQuery}
+            onKeyDown={handleKeyDown}
+            placeholder="e.g. Ywa Ma, Kone Gyi"
+            items={villageEnOptions}
+          />
         </div>
 
         {/* Burmese name filter */}
@@ -146,26 +133,14 @@ export default function FilterBar({
           <label htmlFor="village-input" className="text-sm font-medium text-slate-300">
             Burmese Village Name (MM):
           </label>
-          <div className="relative">
-            <input
-              id="village-input"
-              type="text"
-              value={villageQuery}
-              onChange={(e) => setVillageQuery(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="e.g. ရွာမ, ကုန်းကြီး"
-              className="w-full glass-input rounded-xl pl-4 pr-10 py-3 text-white placeholder-slate-500"
-            />
-            {villageQuery && (
-              <button
-                type="button"
-                onClick={() => setVillageQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
-              >
-                <X size={16} />
-              </button>
-            )}
-          </div>
+          <AutocompleteInput
+            id="village-input"
+            value={villageQuery}
+            onChange={setVillageQuery}
+            onKeyDown={handleKeyDown}
+            placeholder="e.g. ရွာမ, ကုန်းကြီး"
+            items={villageMmOptions}
+          />
         </div>
       </div>
 
